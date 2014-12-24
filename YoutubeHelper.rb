@@ -98,17 +98,23 @@ class Youtube_Helper
   def upload_thumbnail  video_id, thumbnail_file, thumbnail_size
     puts 'uploading thumbnail'
     begin
-      thumbnail_upload_response = @@client.execute!({ :api_method => @@youtube.thumbnails.set,
-                              :parameters => { :videoId => video_id,
-                                               'uploadType' => 'media',
-                                               :onBehalfOfContentOwner => @@youtube_email},
-                              :media => thumbnail_file,
-                              :headers => { 'Content-Length' => thumbnail_size.to_s,
-                                            'Content-Type' => 'image/jpeg' }
-                              })
-      puts 'finished uploading thumbnail'
+      thumbnail_upload_response = @@client.execute({ :api_method => @@youtube.thumbnails.set,
+                            :parameters => { :videoId => video_id,
+                                             'uploadType' => 'media',
+                                             :onBehalfOfContentOwner => @@youtube_email},
+                            :media => thumbnail_file,
+                            :headers => { 'Content-Length' => thumbnail_size.to_s,
+                                          'Content-Type' => 'image/jpg' }
+                            })
     rescue Google::APIClient::TransmissionError => e
         puts e.result.body 
     end 
   end
+
+  # def get_video_statistics video_id
+  #   stats_response = @@client.execute!( :api_method => @@youtube.videos.list,
+  #                   :parameters => {:videoId => video_id, :part => 'statistics' }
+  #                   )
+  #   return stats_response
+  # end
 end
