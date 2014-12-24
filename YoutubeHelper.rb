@@ -104,7 +104,7 @@ class Youtube_Helper
                                                :onBehalfOfContentOwner => @@youtube_email},
                               :media => thumbnail_file,
                               :headers => { 'Content-Length' => thumbnail_size.to_s,
-                                            'Content-Type' => 'image/jpg' }
+                                            'Content-Type' => 'image/jpeg' }
                               })
       puts 'finished uploading thumbnail'
     rescue Google::APIClient::TransmissionError => e
