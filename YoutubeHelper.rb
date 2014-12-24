@@ -14,18 +14,19 @@ class Youtube_Helper
   @@youtube_email = '' #email associated with youtube account
   @@p12_file_path = '' #path to the file downloaded from the service account (Generate new p12 key button)
   @@p12_password = '' # password to the file usually 'notasecret'
+  @@api_key = nil # The API key for non authenticated things like lists
   YOUTUBE_UPLOAD_SCOPE = 'https://www.googleapis.com/auth/youtube.upload'
   YOUTUBE_API_SERVICE_NAME = 'youtube'
   YOUTUBE_API_VERSION = 'v3'
   @@client = nil
   @@youtube = nil
 
-  def initialize(client_email, youtube_email, p12_file_path, p12_password)
+  def initialize(client_email, youtube_email, p12_file_path, p12_password, api_key)
     @@client_email=client_email
     @@youtube_email=youtube_email
     @@p12_file_path=p12_file_path
     @@p12_password=p12_password
-    @@client, @@youtube = get_authenticated_service
+    @@api_key = api_key
   end
 
   def get_authenticated_service
@@ -49,6 +50,8 @@ class Youtube_Helper
     puts 'got client'
     youtube = api_client.discovered_api(YOUTUBE_API_SERVICE_NAME, YOUTUBE_API_VERSION)
     puts 'got youtube'
+    @@client = api_client
+    @@youtube = youtube
     return api_client, youtube
   end
 
@@ -107,10 +110,15 @@ class Youtube_Helper
     end 
   end
 
-  # def get_video_statistics video_id
-  #   stats_response = @@client.execute!( :api_method => @@youtube.videos.list,
-  #                   :parameters => {:videoId => video_id, :part => 'statistics' }
-  #                   )
-  #   return stats_response
-  # end
+  def get_video_statistics video_id
+    client = Google::APIClient.new(:key => @@api_key,
+                                    :application_name => $PROGRAM_NAME,
+                                    :application_version => '1.0.0',
+                                    :authorization => nil)
+    youtube = client.discovered_api(YOUTUBE_API_SERVICE_NAME, YOUTUBE_API_VERSION)
+    stats_response = client.execute!( :api_method => youtube.videos.list,
+                    :parameters => {:part => 'statistics', :id => video_id }
+                    )
+    return stats_response
+  end
 end
