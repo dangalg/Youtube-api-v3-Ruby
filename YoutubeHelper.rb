@@ -6,7 +6,6 @@ require 'google/api_client/client_secrets'
 require 'google/api_client/auth/file_storage'
 require 'google/api_client/auth/installed_app'
 require 'certified'
-require 'Trollop'
 
 
 class Youtube_Helper
@@ -31,11 +30,9 @@ class Youtube_Helper
 
   def get_authenticated_service
     puts 'authenticate'
-    # puts @PROGRAM_NAME.to_s + ' client email ' + @@client_email.to_s + ' youtube email ' + @@youtube_email.to_s + ' p12 file path ' + @@p12_file_path.to_s + ' p12 password ' + @@p12_password.to_s
     api_client = Google::APIClient.new(
       :application_name => $PROGRAM_NAME,
-      :application_version => '1.0.0',
-
+      :application_version => '1.0.0'
     )
     
     puts 'get key'
@@ -83,7 +80,6 @@ class Youtube_Helper
       )
 
       puts'inserted'
-      # videos_insert_response.resumable_upload.send_all(client)
       
       puts "'#{videos_insert_response.data.snippet.title}' (video id: #{videos_insert_response.data.id}) was successfully uploaded."
 
