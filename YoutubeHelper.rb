@@ -20,6 +20,7 @@ class Youtube_Helper
   YOUTUBE_API_VERSION = 'v3'
   @@client = nil
   @@youtube = nil
+  FILE_POSTFIX = '-oauth2.json'
 
   def initialize(client_email, youtube_email, p12_file_path, p12_password, api_key)
     @@client_email=client_email
@@ -30,29 +31,75 @@ class Youtube_Helper
   end
 
   def get_authenticated_service
-    puts 'authenticate'
-    api_client = Google::APIClient.new(
+
+    
+    credentialsFile = $0 + FILE_POSTFIX
+
+    needtoauthenticate = false
+
+    @api_client = Google::APIClient.new(
       :application_name => $PROGRAM_NAME,
       :application_version => '1.0.0'
     )
-    
-    puts 'get key'
+
     key = Google::APIClient::KeyUtils.load_from_pkcs12(@@p12_file_path, @@p12_password)
-    auth_client = Signet::OAuth2::Client.new(
-      :token_credential_uri => 'https://accounts.google.com/o/oauth2/token',
-      :audience => 'https://accounts.google.com/o/oauth2/token',
-      :scope => YOUTUBE_UPLOAD_SCOPE,
-      :issuer => @@client_email,
-      :person => @@youtube_email,
-      :signing_key => key)
-    auth_client.fetch_access_token!
-    api_client.authorization = auth_client
-    puts 'got client'
-    youtube = api_client.discovered_api(YOUTUBE_API_SERVICE_NAME, YOUTUBE_API_VERSION)
-    puts 'got youtube'
-    @@client = api_client
+    @auth_client = Signet::OAuth2::Client.new(
+        :token_credential_uri => 'https://accounts.google.com/o/oauth2/token',
+        :audience => 'https://accounts.google.com/o/oauth2/token',
+        :scope => YOUTUBE_UPLOAD_SCOPE,
+        :issuer => @@client_email,
+        :person => @@youtube_email,
+        :signing_key => key)
+
+
+    if File.exist? credentialsFile
+      puts 'credential file exists'
+      puts credentialsFile.to_s
+      File.open(credentialsFile, 'r') do |file|
+        credentials = JSON.load(file)
+        if !credentials.nil?
+          puts 'get credentials from file'
+          @auth_client.access_token = credentials['access_token']
+          @auth_client.client_id = credentials['client_id']
+          @auth_client.client_secret = credentials['client_secret']
+          @auth_client.refresh_token = credentials['refresh_token']
+          @auth_client.expires_in = (Time.parse(credentials['token_expiry']) - Time.now).ceil
+          @api_client.authorization = @auth_client
+          if @auth_client.expired?
+            puts 'authorization expired'
+            needtoauthenticate = true
+          end
+        else
+          needtoauthenticate = true
+        end
+      end
+    else
+      needtoauthenticate = true
+    end
+
+    if needtoauthenticate
+      @auth_client.fetch_access_token!
+      @api_client.authorization = @auth_client
+      save(credentialsFile)
+    end
+
+    youtube = @api_client.discovered_api(YOUTUBE_API_SERVICE_NAME, YOUTUBE_API_VERSION)
+    @@client = @api_client
     @@youtube = youtube
-    return api_client, youtube
+    return @api_client, youtube
+  end
+
+  def save(credentialsFile)
+    File.open(credentialsFile, 'w', 0600) do |file|
+      json = JSON.dump({
+        :access_token => @auth_client.access_token,
+        :client_id => @auth_client.client_id,
+        :client_secret => @auth_client.client_secret,
+        :refresh_token => @auth_client.refresh_token,
+        :token_expiry => @auth_client.expires_at
+      })
+      file.write(json)
+    end
   end
 
   def upload2youtube file, title, description, category_id, keywords, privacy_status
